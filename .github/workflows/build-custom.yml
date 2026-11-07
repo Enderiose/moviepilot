@@ -51,6 +51,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # ghcr 镜像名必须全小写，而 github.repository_owner 会保留账号原始大小写（Enderiose）
+      - name: Resolve image name
+        id: img
+        run: |
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "name=ghcr.io/${owner}/moviepilot-v2" >> "$GITHUB_OUTPUT"
+          echo "镜像名: ghcr.io/${owner}/moviepilot-v2"
+
       - name: Build Image
         uses: docker/build-push-action@v7
         with:
@@ -60,8 +68,8 @@ jobs:
             linux/amd64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/moviepilot-v2:${{ env.APP_VERSION }}-custom
-            ghcr.io/${{ github.repository_owner }}/moviepilot-v2:custom
+            ${{ steps.img.outputs.name }}:${{ env.APP_VERSION }}-custom
+            ${{ steps.img.outputs.name }}:custom
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
