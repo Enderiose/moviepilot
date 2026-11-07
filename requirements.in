@@ -92,3 +92,11 @@ google-genai~=2.8.0
 ddgs~=9.14.4
 websocket-client~=1.9.0
 lark-oapi~=1.6.8
+
+# ==== netstorm: 插件级依赖预装 ====
+# 以下包只被「插件自带的 requirements.txt」需要，MoviePilot 官方 requirements 里没有。
+# 插件依赖是装进 /opt/venv 的，而 /opt/venv 来自镜像层 —— 一旦换镜像或重建容器，
+# 这些包就消失了，插件会在 import 阶段直接崩（实测 2.15.6 下 3 个插件受影响）。
+# 因此在这里预装，保证镜像自带。
+python-hosts~=1.1.2      # cloudflarespeedtest / customhosts
+webdavclient3~=3.14.6    # autobackup（WebDAV 备份，惰性 import）

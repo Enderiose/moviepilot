@@ -1,11 +1,10 @@
 name: MoviePilot Builder v2
+# netstorm: 停用自动触发。
+# 本 fork 只用 build-custom.yml 构建并推送 ghcr.io/<owner>/moviepilot-v2。
+# 上游这个工作流会推 DockerHub（依赖 secrets.DOCKER_USERNAME / DOCKER_PASSWORD，
+# fork 里没有这些 secret，一触发就失败），并会往分支 commit 插件市场快照。
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - v2
-    paths:
-      - 'version.py'
 
 permissions:
   contents: write

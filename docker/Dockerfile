@@ -140,6 +140,18 @@ WORKDIR /app
 COPY --from=prepare_code /app /app
 COPY --from=prepare_code /public /public
 
+# ==== netstorm 自定义补丁（个人镜像，非上游代码）====
+# 说明见 patches/README.md；脚本幂等，上游重构导致失配时会报错并中断构建（不会静默产出坏镜像）
+COPY patches/ /patches/
+RUN set -eu; \
+    for p in /patches/[0-9][0-9]-*.py; do \
+        echo "== applying $(basename "$p")"; \
+        MP_APP_ROOT=/app MP_PATCH_NO_BACKUP=1 python3 "$p"; \
+    done; \
+    python3 -m py_compile /app/app/modules/emby/emby.py /app/app/helper/image.py; \
+    echo "== patches applied"
+# ==== netstorm 补丁结束 ====
+
 RUN cp -f /app/docker/nginx.common.conf /etc/nginx/common.conf \
     && cp -f /app/docker/nginx.template.conf /etc/nginx/nginx.template.conf \
     && cp -f /app/docker/update.sh /usr/local/bin/mp_update.sh \
