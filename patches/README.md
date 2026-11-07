@@ -33,6 +33,7 @@ RUN set -eu; \
 | `10-emby-image-probe-internal.py` | `app/modules/emby/emby.py` → `generate_external_image_link()` | 探测改用**内网** `_host`，返回仍用公网 `_playhost`。原实现拿公网地址做 GET 探测，NAS 内部访问自己的域名要 NAT 回环（hairpin）→ 必然超时 → 必然误报「未获取到返回数据」并返回 `None` |
 | `20-emby-remoteimages-debug.py` | 同上文件 → `get_remote_image_by_id()` | 把 `Items/RemoteImages 未获取到返回数据，采用本地图片` 从 `info` 降为 `debug`（国产剧无 TMDB 图时必现，属正常回退） |
 | `30-image-internal-fallback.py` | `app/helper/image.py` | 新增 `ImageHelper._internal_equivalent_url()`；`fetch_image` / `async_fetch_image` 首次失败后用内网等价地址重试。修复 Telegram 等「服务端下图」渠道无图 |
+| `40-torrent-direct-then-proxy.py` | `app/helper/torrent.py` → `TorrentHelper.download_torrent()` | 拉取 `.torrent` 改为**直连优先 → 直连无响应才降级系统代理**。NAS 出网到部分站点/CDN 存在丢包与 MTU 黑洞（`ping -M do -s 1448` 全丢、`tcp_mtu_probing` 需设 2），报 `ReadTimeout` / `RemoteDisconnected`；只影响拉种子的 3 个请求，搜索/登录/RSS/announce 不动 |
 
 ## 本地验证（不用起容器）
 
@@ -56,7 +57,7 @@ cd /tmp/mpc && python3 -m py_compile app/modules/emby/emby.py app/helper/image.p
 上游 `docker/Dockerfile` 在 `prepare_code` 阶段会下载
 `MoviePilot-Plugins/archive/refs/heads/main.zip` 并把 `plugins.v2/*` 灌进 `/app/app/plugins`。
 上游 main 已转向 v3，**若哪天 `plugins.v2/` 被移除，构建会在该 `mv` 处失败**。
-届时把那一行 URL 换成固定 tag 即可，例如：
+届时把那一行 URL 换成固定 tag 即可（2026-11-08 实测：上游 main 仍有 `plugins.v2/`，但我们的 34 个插件里有 **18 个已不在其中**，故必须靠 `plugins-vendor/` 兜底），例如：
 
 ```dockerfile
 curl -sL "https://github.com/jxxghp/MoviePilot-Plugins/archive/refs/tags/<某个含 plugins.v2 的 tag>.zip"
