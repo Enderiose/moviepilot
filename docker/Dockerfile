@@ -140,6 +140,13 @@ WORKDIR /app
 COPY --from=prepare_code /app /app
 COPY --from=prepare_code /public /public
 
+# ==== netstorm: 钉死插件版本（非上游代码）====
+# 上游会把停更插件从 MoviePilot-Plugins 的 plugins.v2 删掉（实测 18 个已消失），
+# 且保留的那部分版本会漂移。这里用验证过的快照覆盖，保证容器重建/换镜像后插件不丢不变。
+# 说明见 plugins-vendor/README.md
+COPY plugins-vendor/ /app/app/plugins/
+# ==== netstorm 插件结束 ====
+
 # ==== netstorm 自定义补丁（个人镜像，非上游代码）====
 # 说明见 patches/README.md；脚本幂等，上游重构导致失配时会报错并中断构建（不会静默产出坏镜像）
 COPY patches/ /patches/

@@ -1,7 +1,11 @@
 name: build-custom
 
-# 个人镜像：MoviePilot v2 + patches/
-# 产物：ghcr.io/<owner>/moviepilot:<APP_VERSION>-custom 与 :custom
+# 个人镜像：MoviePilot v2 + patches/ + plugins-vendor/
+# 产物标签（每次构建打 4 个，都带推送日期，便于回溯与上游同步管理）：
+#   <APP_VERSION>-custom-<YYYYMMDD>-<sha7>   完全唯一，永不覆盖（推荐用于回滚引用）
+#   <APP_VERSION>-custom-<YYYYMMDD>          当天构建的最新一次（同日重构会移动）
+#   <APP_VERSION>-custom                     该上游版本的最新一次
+#   custom                                   始终指向最新构建（compose 日常用）
 #
 # 与上游 build.yml 的区别：
 #   - 只推 ghcr（用 GITHUB_TOKEN，无需 DockerHub secrets）
@@ -59,8 +63,14 @@ jobs:
         id: img
         run: |
           owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "name=ghcr.io/${owner}/moviepilot" >> "$GITHUB_OUTPUT"
-          echo "镜像名: ghcr.io/${owner}/moviepilot"
+          date=$(TZ=Asia/Shanghai date +%Y%m%d)
+          sha=$(echo "${{ github.sha }}" | cut -c1-7)
+          {
+            echo "name=ghcr.io/${owner}/moviepilot"
+            echo "date=${date}"
+            echo "sha=${sha}"
+          } >> "$GITHUB_OUTPUT"
+          echo "镜像: ghcr.io/${owner}/moviepilot:${APP_VERSION}-custom-${date}-${sha}"
 
       - name: Build Image
         uses: docker/build-push-action@v7
@@ -71,11 +81,14 @@ jobs:
             linux/amd64
           push: true
           tags: |
+            ${{ steps.img.outputs.name }}:${{ env.APP_VERSION }}-custom-${{ steps.img.outputs.date }}-${{ steps.img.outputs.sha }}
+            ${{ steps.img.outputs.name }}:${{ env.APP_VERSION }}-custom-${{ steps.img.outputs.date }}
             ${{ steps.img.outputs.name }}:${{ env.APP_VERSION }}-custom
             ${{ steps.img.outputs.name }}:custom
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.version=${{ env.APP_VERSION }}-custom
+            org.opencontainers.image.version=${{ env.APP_VERSION }}-custom-${{ steps.img.outputs.date }}
+            org.opencontainers.image.created=${{ steps.img.outputs.date }}
           cache-from: type=gha,scope=moviepilot-custom
           cache-to: type=gha,scope=moviepilot-custom,mode=max
