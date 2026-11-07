@@ -1,7 +1,7 @@
 name: build-custom
 
 # 个人镜像：MoviePilot v2 + patches/
-# 产物：ghcr.io/<owner>/moviepilot-v2:<APP_VERSION>-custom 与 :custom
+# 产物：ghcr.io/<owner>/moviepilot:<APP_VERSION>-custom 与 :custom
 #
 # 与上游 build.yml 的区别：
 #   - 只推 ghcr（用 GITHUB_TOKEN，无需 DockerHub secrets）
@@ -51,13 +51,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # ghcr 镜像名必须全小写，而 github.repository_owner 会保留账号原始大小写（Enderiose）
+      # 两个坑：
+      #   1) ghcr 镜像名必须全小写，而 github.repository_owner 保留账号原始大小写（Enderiose）
+      #   2) 包名用仓库名 moviepilot —— 已有的 moviepilot-v2 包是「账号所有」且未关联本仓库，
+      #      fork 的 GITHUB_TOKEN 写它会被拒（permission_denied: read_package）
       - name: Resolve image name
         id: img
         run: |
           owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "name=ghcr.io/${owner}/moviepilot-v2" >> "$GITHUB_OUTPUT"
-          echo "镜像名: ghcr.io/${owner}/moviepilot-v2"
+          echo "name=ghcr.io/${owner}/moviepilot" >> "$GITHUB_OUTPUT"
+          echo "镜像名: ghcr.io/${owner}/moviepilot"
 
       - name: Build Image
         uses: docker/build-push-action@v7
