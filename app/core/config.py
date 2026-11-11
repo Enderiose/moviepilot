@@ -651,6 +651,14 @@ class Settings(BaseSettings, ConfigModel, LogConfigModel):
             app_env_path = self.CONFIG_PATH / "app.env"
             if app_env_path.exists():
                 load_dotenv(dotenv_path=app_env_path, override=False, encoding="utf-8")
+                # 只统计「键名」，绝不打印值
+                keys = []
+                for _line in app_env_path.read_text(encoding="utf-8", errors="replace").splitlines():
+                    _m = re.match(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*=", _line)
+                    if _m:
+                        keys.append(_m.group(1))
+                hit = [k for k in keys if k in os.environ]
+                logger.info(f"app.env 同步到进程环境变量：{len(hit)}/{len(keys)} 个键生效")
         except Exception as err:
             logger.warning(f"加载 app.env 到环境变量失败：{err}")
         # 如果是二进制程序，确保配置文件存在
