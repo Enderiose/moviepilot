@@ -641,6 +641,18 @@ class Settings(BaseSettings, ConfigModel, LogConfigModel):
         for path in [self.CONFIG_PATH, self.TEMP_PATH, self.LOG_PATH, self.COOKIE_PATH]:
             if not path.exists():
                 path.mkdir(parents=True, exist_ok=True)
+        # 【本地补丁】把 app.env 里的键值同步进 os.environ：
+        # pydantic-settings 的 env_file 只填充 Settings 字段，**不会**写 os.environ，
+        # 而插件（如 IYUU 认证读取 IYUU_SIGN）是直接读 os.environ 的。
+        # 这样 compose 里就不用再明文写令牌，只放 /config/app.env 即可。
+        # override=False：真实环境变量（compose）优先，不会被 app.env 覆盖。
+        try:
+            from dotenv import load_dotenv
+            app_env_path = self.CONFIG_PATH / "app.env"
+            if app_env_path.exists():
+                load_dotenv(dotenv_path=app_env_path, override=False, encoding="utf-8")
+        except Exception as err:
+            logger.warning(f"加载 app.env 到环境变量失败：{err}")
         # 如果是二进制程序，确保配置文件存在
         if SystemUtils.is_frozen():
             app_env_path = self.CONFIG_PATH / "app.env"
